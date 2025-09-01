@@ -1,0 +1,19 @@
+# Core Dependencies
+swarms
+rich
+python-dotenv
+loguru
+
+# Development Dependencies (Optional)
+pytest
+pytest-cov
+black
+ruff
+mypy
+
+# Type Checking Dependencies (Optional)
+types-toml
+types-redis
+types-pytz
+types-chardet
+mypy-protobuf
