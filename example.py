@@ -1,92 +1,289 @@
-import json
-from product_marketing_agency.main import ProductMarketingAgency
+import os
 
-# Initialize the Product Marketing Agency
-agency = ProductMarketingAgency(
-    model_name="gpt-4o",  # Or "gpt-4o-mini" for faster/cheaper option
-    max_retries=2,  # Reduced retries for example run
-    verbose=False,  # Set to True for detailed logs
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Prompt
+from rich.table import Table
+from dotenv import load_dotenv
+
+from product_marketing_agency.main import (
+    ImageType,
+    ProductMarketingAgency,
+    display_welcome_banner,
+    get_product_information_interactive,
 )
 
-# Define product details for marketing campaign
-product_data = {
-    "product_name": "CloudWalk Pro Running Shoes",
-    "category": "Athletic Footwear",
-    "key_features": [
-        "Ultra-lightweight mesh upper",
-        "CloudFoam cushioning technology",
-        "Non-slip rubber outsole",
-        "Breathable moisture-wicking lining"
-    ],
-    "accessories": [
-        "Extra laces (white and black)",
-        "Shoe care kit",
-        "Travel shoe bag",
-        "Performance insoles"
-    ],
-    "objectives": [
-        "Showcase product versatility",
-        "Highlight comfort features",
-        "Appeal to fitness enthusiasts",
-        "Demonstrate premium quality"
-    ],
-    "suggested_image_types": [1, 2, 3, 7, 9]  # Master shot, flat lay, detail, UGC, banner
-}
+load_dotenv()
 
-# Create product profile
-print("\n--- Creating Product Profile ---")
-profile_created = agency.create_product_profile(product_data)
+console = Console()
 
-if profile_created:
-    print(f"✓ Product profile created: {product_data['product_name']}")
-    print(f"  Product ID: {agency.current_product['product_id']}")
-    print(f"  Category: {agency.current_product['category']}")
-    print(f"  Features: {len(agency.current_product['key_features'])} key features")
-    print(f"  Suggested images: {agency.current_product['suggested_image_types']}")
-else:
-    print("✗ Failed to create product profile")
-    exit(1)
 
-# Generate marketing images
-print("\n--- Generating Marketing Images ---")
-results = agency.run_campaign()
+def main_menu():
+    """Main application menu"""
 
-# Output the results
-print("\n--- Campaign Results ---")
-if results["success"]:
-    print(f"✓ Campaign completed successfully!")
-    print(f"  Images generated: {results['images_generated']}")
-    print(f"  Total time: {results['total_time']:.2f} seconds")
-    
-    print("\n--- Generated Images ---")
-    for image_info in results["image_details"]:
-        print(f"  • {image_info['type']}:")
-        print(f"    Status: {image_info['status']}")
-        if image_info['status'] == 'success':
-            print(f"    Path: {image_info['path']}")
-            print(f"    Size: {image_info.get('size', 'N/A')}")
-        print("-" * 30)
-    
-    print("\n--- Campaign Metrics ---")
-    print(json.dumps(results["execution_metrics"], indent=2))
-else:
-    print(f"✗ Campaign failed: {results.get('error', 'Unknown error')}")
+    # Initialize the agency
+    agency = ProductMarketingAgency()
 
-# Save campaign report (optional)
-try:
-    agency.save_campaign_report()
-    print("\n✓ Campaign report saved to output/campaign_reports/")
-except Exception as e:
-    print(f"\n✗ Error saving report: {e}")
+    while True:
+        # Create main menu with Rich table
+        menu_table = Table(
+            title="[bold magenta]MAIN MENU[/bold magenta]"
+        )
+        menu_table.add_column("Option", style="cyan bold", width=8)
+        menu_table.add_column("Description", style="white")
 
-# Example of generating a single image type
-print("\n--- Generating Single Image Example ---")
-single_image = agency.generate_single_image(
-    image_type=1,  # Master Product Shot
-    custom_prompt="Premium running shoes on white background with dramatic lighting"
-)
+        menu_table.add_row("1", "Create New Marketing Campaign")
+        menu_table.add_row("2", "Batch Process Multiple Products")
+        menu_table.add_row("3", "Load Existing Product Profile")
+        menu_table.add_row("4", "View Campaign Statistics")
+        menu_table.add_row("5", "Set Master Reference Image")
+        menu_table.add_row("6", "Help & Documentation")
+        menu_table.add_row("7", "Exit")
 
-if single_image["success"]:
-    print(f"✓ Single image generated: {single_image['image_path']}")
-else:
-    print(f"✗ Failed to generate image: {single_image.get('error', 'Unknown error')}")
+        console.print("\n")
+        console.print(menu_table)
+
+        choice = Prompt.ask(
+            "\n[bold cyan]Select option[/bold cyan]",
+            choices=["1", "2", "3", "4", "5", "6", "7"],
+        )
+
+        try:
+            if choice == "1":
+                # Single product campaign
+                product_data = get_product_information_interactive()
+
+                # Extract custom requirements and master image from bulk input
+                custom_req = product_data.pop(
+                    "custom_requirements", ""
+                )
+                master_img_path = product_data.pop(
+                    "master_image_path", ""
+                )
+
+                # Validate master image path if provided
+                master_img = None
+                if master_img_path and os.path.exists(
+                    master_img_path
+                ):
+                    master_img = master_img_path
+                    print(f"✅ Master image found: {master_img_path}")
+                elif master_img_path:
+                    print(
+                        f"⚠️  Master image not found: {master_img_path}"
+                    )
+
+                results = agency.run_marketing_campaign(
+                    product_data=product_data,
+                    custom_requirements=custom_req,
+                    master_image_path=master_img,
+                    interactive=True,
+                )
+
+                success_panel = Panel(
+                    f"Campaign completed! Generated {len(results)} marketing assets.",
+                    title="[bold green]Success![/bold green]",
+                    border_style="green",
+                )
+                console.print("\n")
+                console.print(success_panel)
+
+            elif choice == "2":
+                # Batch processing
+                batch_panel = Panel(
+                    "[bold yellow]BATCH PROCESSING MODE[/bold yellow]\nThis feature would load products from a JSON file or database.\nFor demo purposes, using sample data...",
+                    border_style="yellow",
+                )
+                console.print("\n")
+                console.print(batch_panel)
+
+                # Demo batch data
+                sample_products = [
+                    {
+                        "name": "EcoSmart Water Bottle",
+                        "category": "Sustainability",
+                        "description": (
+                            "Smart water bottle with temperature control"
+                        ),
+                        "features": [
+                            "Temperature control",
+                            "App connectivity",
+                            "Leak-proof",
+                        ],
+                        "target_audience": (
+                            "Health-conscious professionals"
+                        ),
+                        "brand_colors": ["#22c55e", "#ffffff"],
+                        "price_range": "$49-79",
+                        "usp": [
+                            "24hr temperature retention",
+                            "Smart hydration tracking",
+                        ],
+                    },
+                    {
+                        "name": "PowerDesk Pro",
+                        "category": "Office Equipment",
+                        "description": (
+                            "Height-adjustable standing desk with wireless charging"
+                        ),
+                        "features": [
+                            "Height adjustment",
+                            "Wireless charging pad",
+                            "Cable management",
+                        ],
+                        "target_audience": (
+                            "Remote workers and professionals"
+                        ),
+                        "brand_colors": ["#1f2937", "#f59e0b"],
+                        "price_range": "$299-499",
+                        "usp": [
+                            "Wireless charging integration",
+                            "Memory presets",
+                        ],
+                    },
+                ]
+
+                agency.batch_process_products(sample_products)
+                completion_panel = Panel(
+                    f"Batch processing completed! Processed {len(sample_products)} products.",
+                    title="[bold green]Batch Complete![/bold green]",
+                    border_style="green",
+                )
+                console.print("\n")
+                console.print(completion_panel)
+
+            elif choice == "3":
+                # Load existing profile
+                profiles = agency.list_available_profiles()
+                if profiles:
+                    profiles_text = (
+                        f"Available Profiles: {', '.join(profiles)}"
+                    )
+                    console.print(f"\n[cyan]{profiles_text}[/cyan]")
+                    profile_id = Prompt.ask(
+                        "Enter profile ID to load"
+                    )
+
+                    profile = agency.load_product_profile(profile_id)
+                    if profile:
+                        console.print(
+                            f"\n[bold green]✓ Loaded profile: {profile.product_name}[/bold green]"
+                        )
+                        # Continue with campaign using existing profile...
+                    else:
+                        console.print(
+                            "[red]❌ Profile not found.[/red]"
+                        )
+                else:
+                    console.print(
+                        "\n[yellow]⚠️ No existing profiles found.[/yellow]"
+                    )
+
+            elif choice == "4":
+                # Statistics
+                stats = agency.get_campaign_statistics()
+                # Create statistics table
+                stats_table = Table(
+                    title="[bold cyan]📊 CAMPAIGN STATISTICS[/bold cyan]"
+                )
+                stats_table.add_column("Metric", style="green bold")
+                stats_table.add_column("Value", style="white")
+
+                stats_table.add_row(
+                    "Total Products", str(stats["total_products"])
+                )
+                stats_table.add_row(
+                    "Total Jobs", str(stats["total_jobs"])
+                )
+                stats_table.add_row(
+                    "Completed Jobs", str(stats["completed_jobs"])
+                )
+                stats_table.add_row(
+                    "Save Directory", stats["save_directory"]
+                )
+
+                console.print("\n")
+                console.print(stats_table)
+
+                if stats["image_types_generated"]:
+                    types_table = Table(
+                        title="[bold yellow]Image Types Generated[/bold yellow]"
+                    )
+                    types_table.add_column("Type", style="magenta")
+                    types_table.add_column("Count", style="cyan")
+
+                    for img_type, count in stats[
+                        "image_types_generated"
+                    ].items():
+                        types_table.add_row(
+                            img_type.replace("_", " ").title(),
+                            str(count),
+                        )
+
+                    console.print("\n")
+                    console.print(types_table)
+
+            elif choice == "5":
+                # Set master image
+                product_id = input("Product ID: ").strip()
+                image_path = input("Master Image Path: ").strip()
+
+                try:
+                    agency.set_master_image(product_id, image_path)
+                    print(" Master image set successfully.")
+                except Exception as e:
+                    print(f" Error: {str(e)}")
+
+            elif choice == "6":
+                # Help
+                print("\n= HELP & DOCUMENTATION")
+                print("-" * 40)
+                print(
+                    "This system creates marketing materials using 6 specialized AI agents:"
+                )
+                print("1. Orchestrator Agent - Manages workflow")
+                print(
+                    "2. Product Interpreter Agent - Analyzes products"
+                )
+                print(
+                    "3. Image Type Selector Agent - Guides selection"
+                )
+                print(
+                    "4. Prompt Generator Agent - Creates custom prompts"
+                )
+                print("5. Image Generation Agent - Generates content")
+                print("6. Output Handler Agent - Manages feedback")
+                print("\nSupported Image Types:")
+                for img_type in ImageType:
+                    image_name = img_type.name.replace(
+                        "_", " "
+                    ).title()
+                    print(f" {image_name}")
+
+            elif choice == "7":
+                print(
+                    "\n= Thank you for using Product Marketing Agency!"
+                )
+                print(
+                    "All generated content is saved in the outputs directory."
+                )
+                break
+
+            else:
+                print("L Invalid option. Please select 1-7.")
+
+        except KeyboardInterrupt:
+            print("\n\n= Operation cancelled. Goodbye!")
+            break
+        except Exception as e:
+            print(f"\nL Error: {str(e)}")
+            print("Please try again or contact support.")
+
+
+# ==========================================================================
+# Main Application Entry Point
+# ==========================================================================
+
+if __name__ == "__main__":
+    display_welcome_banner()
+    main_menu()
