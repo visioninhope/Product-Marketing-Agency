@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "product-marketing-agency"
-version = "1.0.0"
+version = "1.0.1"
 description = "A comprehensive multi-agent marketing system for generating various types of product marketing images and content using the swarms framework"
 license = "MIT"
 authors = ["The Swarm Corporation <kye@swarms.world>"]

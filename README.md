@@ -15,9 +15,7 @@ A comprehensive multi-agent system for generating professional product marketing
 ### Installation
 
 ```bash
-git clone https://github.com/The-Swarm-Corporation/Product-Marketing-Agency.git
-cd Product-Marketing-Agency
-pip install -r requirements.txt
+pip3 install -U product-marketing-agency
 ```
 
 ### Setup Environment
